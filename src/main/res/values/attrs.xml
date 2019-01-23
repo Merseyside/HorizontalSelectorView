@@ -6,6 +6,7 @@
         <attr name="android:entries" format="reference"/>
         <attr name="horizontalSelectorTextColor" format="color"/>
         <attr name="horizontalSelectorButtonColor" format="color"/>
+        <attr name="horizontalSelectorEntryValue" format="string"/>
         <attr name="horizontalSelectorType" format="enum">
             <enum name="text" value="0"/>
             <enum name="image" value="1"/>

@@ -2,23 +2,22 @@ package com.vpnapp.upstream.horizontalselectorview;
 
 import android.content.Context;
 import android.content.res.TypedArray;
-import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
-import android.support.annotation.Nullable;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.graphics.drawable.DrawableCompat;
 import android.util.AttributeSet;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+import androidx.core.graphics.drawable.DrawableCompat;
 
 public class HorizontalSelectorView extends LinearLayout {
-
-    private final String TAG = "CustomPreference";
 
     public enum Type {
         TEXT(0), IMAGE(1);
@@ -71,6 +70,7 @@ public class HorizontalSelectorView extends LinearLayout {
     }
 
     private OnValueChangeListener listener;
+    private OnValueChangeListener bindingListener;
 
     private Context context;
     private int title_id;
@@ -84,8 +84,6 @@ public class HorizontalSelectorView extends LinearLayout {
     private Buttons buttons;
 
     private TextView title_tw;
-    private ImageButton prev;
-    private ImageButton next;
     private View value_view;
 
     public HorizontalSelectorView(Context context, @Nullable AttributeSet attrs) {
@@ -113,9 +111,15 @@ public class HorizontalSelectorView extends LinearLayout {
         buttons = Buttons.fromId(array.getInt(R.styleable.HorizontalSelectorViewAttrs_horizontalSelectorButtons, 0));
 
         textColorId = array.getColor(R.styleable.HorizontalSelectorViewAttrs_horizontalSelectorTextColor, View.NO_ID);
-        buttonsColorId = array.getColor(R.styleable.HorizontalSelectorViewAttrs_horizontalSelectorButtonColor, View.NO_ID);
+        buttonsColorId = array.getColor(R.styleable.HorizontalSelectorViewAttrs_horizontalSelectorButtonColor, getThemeAccentColor(context));
 
         array.recycle();
+    }
+
+    public static int getThemeAccentColor (final Context context) {
+        final TypedValue value = new TypedValue ();
+        context.getTheme ().resolveAttribute (R.attr.colorAccent, value, true);
+        return value.data;
     }
 
     private void initializeView() {
@@ -128,11 +132,11 @@ public class HorizontalSelectorView extends LinearLayout {
         }
 
         title_tw = findViewById(R.id.title);
-        prev = findViewById(R.id.prev);
+        ImageButton prev = findViewById(R.id.prev);
         prev.setOnClickListener(clickListener);
         setDrawableTint(prev, R.drawable.horizontal_selector_chevron_left, buttonsColorId);
 
-        next = findViewById(R.id.next);
+        ImageButton next = findViewById(R.id.next);
         next.setOnClickListener(clickListener);
         setDrawableTint(next, R.drawable.horizontal_selector_chevron_right, buttonsColorId);
 
@@ -170,16 +174,25 @@ public class HorizontalSelectorView extends LinearLayout {
                         entryValueIndex++;
                 }
                 fillView();
-                if (listener != null)
-                    listener.valueChanged(entry_values[entryValueIndex]);
+                onEntryValueChanged(entry_values[entryValueIndex]);
             }
         }
     };
 
+    private void onEntryValueChanged(String value) {
+        if (listener != null)
+            listener.valueChanged(value);
+
+        if (bindingListener != null)
+            bindingListener.valueChanged(value);
+    }
+
     private void fillView() {
         if (title_id != View.NO_ID) {
             title_tw.setText(context.getResources().getString(title_id));
-            title_tw.setTextColor(textColorId);
+
+            if (textColorId != View.NO_ID)
+                title_tw.setTextColor(textColorId);
         } else
             title_tw.setVisibility(View.GONE);
 
@@ -187,33 +200,56 @@ public class HorizontalSelectorView extends LinearLayout {
 
         if (value_view instanceof TextView) {
             TextView tw = (TextView) value_view;
-            tw.setTextColor(textColorId);
+
+            if (textColorId != View.NO_ID)
+                tw.setTextColor(textColorId);
+
             tw.setText(entries[entryValueIndex]);
         } else {
             ImageView iw = (ImageView) value_view;
             int id = context.getResources().getIdentifier(entries[entryValueIndex], "drawable", context.getPackageName());
             iw.setImageResource(id);
         }
-
     }
 
-    public void setCurrentEntryValue(String value) {
-        for (int i = 0; i < entry_values.length; i++) {
-            if (value.equals(entry_values[i])) {
-                entryValueIndex = i;
-                break;
+    public void setCurrentEntryValue(@NonNull String value) {
+        if (value != null) {
+            int newEntryValueIndex = -1;
+
+            for (int i = 0; i < entry_values.length; i++) {
+                if (value.equals(entry_values[i])) {
+                    newEntryValueIndex = i;
+                    break;
+                }
+            }
+
+            if (newEntryValueIndex != -1) {
+                this.entryValueIndex = newEntryValueIndex;
+                fillView();
             }
         }
-
-        fillView();
     }
 
-    public void setOnValueChangeListener(OnValueChangeListener listener) {
+    @NonNull
+    public String getCurrentEntryValue() {
+        return entry_values[entryValueIndex];
+    }
+
+    boolean isTheSame(@NonNull String entryValue) {
+        return getCurrentEntryValue().equals(entryValue);
+    }
+
+    public void setOnValueChangeListener(@Nullable OnValueChangeListener listener) {
         this.listener = listener;
+    }
+
+    void setBindingListener(@NonNull OnValueChangeListener listener) {
+        this.bindingListener = listener;
     }
 
     public void updateLanguage(Context context) {
         this.context = context;
         fillView();
     }
+
 }
